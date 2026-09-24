@@ -35,6 +35,7 @@ MODEL = 1  # The model to be selected for multi-model structures (default = 1).
 CHAINS = None  # Define chains for protein-protein interaction detection
 REGIONS = None
 COMPRESS = False  # Compress XML and TXT report files
+NPZ = False  # Write interaction arrays in NPZ format (mmCIF input only)
 
 
 # Configuration file for Protein-Ligand Interaction Profiler (PLIP)

@@ -25,6 +25,7 @@ from plip.exchange.report import StructureReport
 from plip.exchange.webservices import fetch_pdb
 from plip.structure.preparation import create_folder_if_not_exists, extract_pdbid
 from plip.structure.preparation import tilde_expansion, PDBComplex
+from plip.structure.cif import is_cif
 
 description = f"The Protein-Ligand Interaction Profiler (PLIP) Version {__version__} " \
               "is a command-line based tool to analyze interactions in a protein-ligand complex. " \
@@ -109,6 +110,28 @@ def process_pdb(pdbfile, outpath, as_string=False, batch_idx=None):
             streport.write_txt(as_string=config.STDOUT)
 
 
+def process_cif(outpath, structure=None, receptor=None, ligands=None, batch_idx=None):
+    """Analysis of a System given as mmCIF file(s), either as one file or as receptor and ligand files."""
+    from plip.profile import profile_system
+    files = [structure] if structure is not None else receptor + (ligands or [])
+    logger.info(f'starting analysis of {", ".join(os.path.basename(f) for f in files)}')
+    create_folder_if_not_exists(outpath)
+    name = os.path.basename(files[0])
+    for ext in ('.gz', '.cif', '.mmcif'):
+        name = name[:-len(ext)] if name.lower().endswith(ext) else name
+    idx_str = f"_{batch_idx}" if batch_idx is not None else ""
+    outprefix = f"{name}_report" if config.OUTPUTFILENAME is None else f"{config.OUTPUTFILENAME}{idx_str}"
+    gz = '.gz' if config.COMPRESS else ''
+    profile_system(structure=structure, receptor=receptor, ligands=ligands,
+                   chains=config.CHAINS, peptides=config.PEPTIDES or None, intra=config.INTRA,
+                   regions=config.REGIONS, model=config.MODEL, keepmod=config.KEEPMOD, nohydro=config.NOHYDRO,
+                   breakcomposite=config.BREAKCOMPOSITE, altlocation=config.ALTLOC,
+                   dnareceptor=config.DNARECEPTOR, nopdbcanmap=config.NOPDBCANMAP, name=name,
+                   npz=f'{outpath}{outprefix}.npz' if config.NPZ else None,
+                   xml=f'{outpath}{outprefix}.xml{gz}' if config.XML else None,
+                   txt=f'{outpath}{outprefix}.txt{gz}' if config.TXT else None)
+
+
 def download_structure(inputpdbid):
     """Given a PDB ID, downloads the corresponding PDB structure.
     Checks for validity of ID and handles error while downloading.
@@ -142,7 +165,7 @@ def remove_duplicates(slist):
     return unique
 
 
-def run_analysis(inputstructs, inputpdbids):
+def run_analysis(inputstructs, inputpdbids, receptor=None, ligands=None):
     """Main function. Calls functions for processing, report generation and visualization."""
     pdbid, pdbpath = None, None
     batch_idx = None
@@ -152,7 +175,9 @@ def run_analysis(inputstructs, inputpdbids):
     logger.info(f'brought to you by: {config.__maintainer__}')
     logger.info(f'please cite: {config.__citation_information__}')
 
-    if inputstructs is not None:  # Process PDB file(s)
+    if receptor is not None:  # Process a System given as receptor and ligand mmCIF files
+        process_cif(config.OUTPATH, receptor=receptor, ligands=ligands)
+    elif inputstructs is not None:  # Process PDB file(s)
         num_structures = len(inputstructs)
         inputstructs = remove_duplicates(inputstructs)
         read_from_stdin = False
@@ -171,7 +196,10 @@ def run_analysis(inputstructs, inputpdbids):
                     sys.exit(1)
                 if num_structures > 1:
                     batch_idx = idx
-            process_pdb(inputstruct, config.OUTPATH, as_string=read_from_stdin, batch_idx=batch_idx)
+            if not read_from_stdin and is_cif(inputstruct):
+                process_cif(config.OUTPATH, structure=inputstruct, batch_idx=batch_idx)
+            else:
+                process_pdb(inputstruct, config.OUTPATH, as_string=read_from_stdin, batch_idx=batch_idx)
     else:  # Try to fetch the current PDB structure(s) directly from the RCBS server
         num_pdbids = len(inputpdbids)
         inputpdbids = remove_duplicates(inputpdbids)
@@ -181,7 +209,7 @@ def run_analysis(inputstructs, inputpdbids):
                 batch_idx = idx
             process_pdb(pdbpath, config.OUTPATH, batch_idx=batch_idx)
 
-    if (pdbid is not None or inputstructs is not None) and config.BASEPATH is not None:
+    if (pdbid is not None or inputstructs is not None or receptor is not None) and config.BASEPATH is not None:
         if config.BASEPATH in ['.', './']:
             logger.info('finished analysis, find the result files in the working directory')
         else:
@@ -195,6 +223,10 @@ def main():
     # '-' as file name reads from stdin
     pdbstructure.add_argument("-f", "--file", dest="input", nargs="+", help="Set input file, '-' reads from stdin")
     pdbstructure.add_argument("-i", "--input", dest="pdbid", nargs="+")
+    pdbstructure.add_argument("--receptor", dest="receptor", nargs="+",
+                              help="Receptor mmCIF file(s) of a system given as separate receptor and ligand files")
+    parser.add_argument("--ligand", dest="ligand", nargs="+",
+                        help="Ligand mmCIF file(s), each file is one ligand (requires --receptor)")
     outputgroup = parser.add_mutually_exclusive_group(required=False)  # Needs either outpath or stdout
     outputgroup.add_argument("-o", "--out", dest="outpath", default="./")
     outputgroup.add_argument("-O", "--stdout", dest="stdout", action="store_true", default=False,
@@ -210,6 +242,8 @@ def main():
                         action="store_true")
     parser.add_argument("-t", "--txt", dest="txt", default=False, help="Generate report file in TXT (RST) format",
                         action="store_true")
+    parser.add_argument("--npz", dest="npz", default=False,
+                        help="Generate interaction arrays in NPZ format (mmCIF input only)", action="store_true")
     parser.add_argument("-z", "--gzip", dest="compress", default=False,
                         help="XML and TXT report files will be gzip compressed.", action="store_true")
     parser.add_argument("--name", dest="outputfilename", default=None,
@@ -295,6 +329,7 @@ def main():
         logger.setLevel(config.DEFAULT_LOG_LEVEL)
     config.MAXTHREADS = arguments.maxthreads
     config.XML = arguments.xml
+    config.NPZ = arguments.npz
     config.TXT = arguments.txt
     config.COMPRESS = arguments.compress
     config.PICS = arguments.pics
@@ -342,9 +377,9 @@ def main():
         else:
             import re
             # add quotes around keys (chain IDs)
-            quoted = re.sub(pattern=r'([{,]\s*)([a-zA-Z0-9_]+)\s*:', repl=r'\1"\2":', string=arguments.regions)
+            quoted = re.sub(pattern=r'([{,]\s*)([a-zA-Z0-9_.]+)\s*:', repl=r'\1"\2":', string=arguments.regions)
             # add quotes around values (residue numbers)
-            quoted = re.sub(pattern=r':\s*([0-9,\s\-]+?)\s*(?=,\s*"[a-zA-Z0-9_]+":|})', repl=r': "\1"', string=quoted)
+            quoted = re.sub(pattern=r':\s*([0-9,\s\-]+?)\s*(?=,\s*"[a-zA-Z0-9_.]+":|})', repl=r': "\1"', string=quoted)
             # add comma to tuples with only one dictionary (without comma would not be treated as tuple)
             ensure_tuples = re.sub(r'\((\s*{[^{}]*}\s*)\)', r'(\1,)', quoted)
             config.REGIONS = ast.literal_eval(ensure_tuples)  # convert string to tuple(s) of one or two dictionaries
@@ -377,13 +412,27 @@ def main():
             config.CHAINS = None
         else:
             import re
-            quoted_input = re.sub(r'(?<!["\'])\b([a-zA-Z0-9_]+)\b(?!["\'])', r'"\1"', arguments.chains)
+            quoted_input = re.sub(r'(?<!["\'\w.])([a-zA-Z0-9_.]+)(?!["\'\w.])', r'"\1"', arguments.chains)
             config.CHAINS = ast.literal_eval(quoted_input)
         if config.CHAINS and not all(isinstance(c, list) for c in config.CHAINS):
             raise ValueError("Chains should be specified as a list of lists, e.g., '[[A], [B, C]]'.")
     except (ValueError, SyntaxError):
         parser.error("The --chains option must be in the format '[[A], [B, C]]'.")
 
+
+    # mmCIF specific options
+    cif_input = arguments.receptor is not None or (
+            arguments.input is not None and any(is_cif(f) for f in arguments.input))
+    if arguments.ligand is not None and arguments.receptor is None:
+        parser.error("--ligand requires --receptor.")
+    if arguments.receptor is not None and not all(is_cif(f) for f in arguments.receptor + (arguments.ligand or [])):
+        parser.error("--receptor and --ligand require mmCIF files (.cif, .cif.gz, .mmcif).")
+    if config.NPZ and not (cif_input and (arguments.receptor is not None or all(is_cif(f) for f in arguments.input))):
+        parser.error("--npz is only supported for mmCIF input.")
+    if cif_input and (config.PICS or config.PYMOL):
+        parser.error("--pics and --pymol are not supported for mmCIF input.")
+    if cif_input and config.STDOUT:
+        parser.error("--stdout is not supported for mmCIF input.")
 
     # Make sure we have pymol with --pics and --pymol
     if config.PICS or config.PYMOL:
@@ -414,7 +463,9 @@ def main():
     if not config.WATER_BRIDGE_OMEGA_MIN < config.WATER_BRIDGE_OMEGA_MAX:
         parser.error("The water bridge omega minimum angle has to be smaller than the water bridge omega maximum angle")
     expanded_paths = tilde_expansion(arguments.input) if arguments.input is not None else None
-    run_analysis(expanded_paths, arguments.pdbid)  # Start main script
+    receptor = tilde_expansion(arguments.receptor) if arguments.receptor is not None else None
+    ligands = tilde_expansion(arguments.ligand) if arguments.ligand is not None else None
+    run_analysis(expanded_paths, arguments.pdbid, receptor, ligands)  # Start main script
 
 
 if __name__ == '__main__':

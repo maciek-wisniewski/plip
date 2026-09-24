@@ -61,6 +61,17 @@ class StructureReport:
             f2 = et.SubElement(e, 'res2')
             f1.text = ":".join([covlinkage.id1, covlinkage.chain1, str(covlinkage.pos1)])
             f2.text = ":".join([covlinkage.id2, covlinkage.chain2, str(covlinkage.pos2)])
+        cif_system = getattr(self.mol, 'cif_system', None)
+        if cif_system is not None:
+            inputfiles = et.SubElement(report, 'input_files')
+            for i, (path, role) in enumerate(zip(cif_system.files, cif_system.roles)):
+                e = et.SubElement(inputfiles, 'input_file', id=str(i + 1), role=role)
+                e.text = path
+            chain_mapping = et.SubElement(report, 'chain_mapping')
+            for i, entry in enumerate(cif_system.chain_mapping):
+                e = et.SubElement(chain_mapping, 'chain', id=str(i + 1), file=str(entry.file_idx + 1),
+                                  internal=entry.internal)
+                e.text = entry.original
         return report
 
     def construct_txt_file(self):
@@ -75,6 +86,15 @@ class StructureReport:
         if config.DNARECEPTOR:
             textlines.append('DNA/RNA in structure was chosen to be part of the receptor.')
         textlines.append(f'Analysis was done on model {config.MODEL}.\n')
+        cif_system = getattr(self.mol, 'cif_system', None)
+        if cif_system is not None:
+            textlines.append('Input files:')
+            for i, (path, role) in enumerate(zip(cif_system.files, cif_system.roles)):
+                textlines.append(f'  {i + 1}. {path} ({role})')
+            textlines.append('Chain mapping (original chain, file -> internal chain):')
+            for entry in cif_system.chain_mapping:
+                textlines.append(f'  {entry.original}, file {entry.file_idx + 1} -> {entry.internal}')
+            textlines.append('')
         return textlines
 
     def get_bindingsite_data(self):
@@ -132,10 +152,12 @@ class BindingSiteReport:
         ################
 
         self.complex = plcomplex
+        self.identifier_map = getattr(plcomplex, 'identifier_map', None)
         self.ligand = self.complex.ligand
         self.bindingsite = self.complex.bindingsite
         self.output_path = self.complex.output_path
-        self.bsid = ':'.join([self.ligand.hetid, self.ligand.chain, str(self.ligand.position)])
+        self.hetid, self.chain = self.resname(self.ligand.hetid), self.chainid(self.ligand.chain)
+        self.bsid = ':'.join([self.hetid, self.chain, str(self.ligand.position)])
         self.longname = self.ligand.longname
         self.ligtype = self.ligand.type
         self.bs_res = self.bindingsite.bs_res
@@ -144,6 +166,10 @@ class BindingSiteReport:
         self.pdbid = self.complex.pdbid.upper()
         self.lig_members = self.complex.lig_members
         self.interacting_chains = self.complex.interacting_chains
+        if self.identifier_map is not None:
+            self.lig_members = [(self.resname(n), self.chainid(c), r) for n, c, r in self.lig_members]
+            self.longname = '-'.join(member[0] for member in self.lig_members)
+            self.interacting_chains = [self.chainid(c) for c in self.interacting_chains]
 
         ############################
         # HYDROPHOBIC INTERACTIONS #
@@ -312,6 +338,43 @@ class BindingSiteReport:
                  m.location, '%.2f' % m.rms, m.geometry, str(m.complexnum), m.metal.coords,
                  m.target.atom.coords))
 
+        if self.identifier_map is not None:
+            self.translate_identifiers()
+
+    def resname(self, name):
+        """Original residue name for an internal one (differs only for mmCIF input)."""
+        return self.identifier_map.resname(name) if self.identifier_map is not None else name
+
+    def chainid(self, chain):
+        """Original chain ID for an internal one (differs only for mmCIF input)."""
+        return self.identifier_map.chain(chain) if self.identifier_map is not None else chain
+
+    def bsres_text(self, bsres):
+        """Binding site residue as residue number and chain, e.g. 47A (47:1.A for mmCIF input, where chain IDs
+        may consist of several characters)."""
+        return f'{bsres[:-1]}:{self.chainid(bsres[-1])}' if self.identifier_map is not None else bsres
+
+    def translate_identifiers(self):
+        """Replace internal chain IDs and residue names in all interaction tables by the original ones."""
+        translate = {'RESCHAIN': self.chainid, 'RESCHAIN_LIG': self.chainid,
+                     'RESTYPE': self.resname, 'RESTYPE_LIG': self.resname}
+        for features, info_name in [(self.hydrophobic_features, 'hydrophobic_info'),
+                                    (self.hbond_features, 'hbond_info'),
+                                    (self.waterbridge_features, 'waterbridge_info'),
+                                    (self.saltbridge_features, 'saltbridge_info'),
+                                    (self.pistacking_features, 'pistacking_info'),
+                                    (self.pication_features, 'pication_info'),
+                                    (self.halogen_features, 'halogen_info'),
+                                    (self.metal_features, 'metal_info')]:
+            columns = [(i, translate[f]) for i, f in enumerate(features) if f in translate]
+            translated = []
+            for row in getattr(self, info_name):
+                row = list(row)
+                for i, fn in columns:
+                    row[i] = fn(row[i])
+                translated.append(tuple(row))
+            setattr(self, info_name, translated)
+
     @staticmethod
     def write_section(name, features, info, f):
         """Provides formatting for one section (e.g. hydrogen bonds)"""
@@ -449,9 +512,10 @@ class BindingSiteReport:
             contact = 'True' if bsres in self.bs_res_interacting else 'False'
             distance = '%.1f' % self.min_dist[bsres][0]
             aatype = self.min_dist[bsres][1]
-            c = et.SubElement(bsresidues, 'bs_residue', id=str(i + 1), contact=contact, min_dist=distance, aa=aatype)
-            c.text = bsres
-        hetid.text, chain.text, position.text = self.ligand.hetid, self.ligand.chain, str(self.ligand.position)
+            c = et.SubElement(bsresidues, 'bs_residue', id=str(i + 1), contact=contact, min_dist=distance,
+                              aa=self.resname(aatype))
+            c.text = self.bsres_text(bsres)
+        hetid.text, chain.text, position.text = self.hetid, self.chain, str(self.ligand.position)
         composite.text = 'True' if len(self.lig_members) > 1 else 'False'
         longname.text = self.longname
         ligtype.text = self.ligtype
