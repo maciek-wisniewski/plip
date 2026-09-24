@@ -134,7 +134,7 @@ or as separate receptor and ligand files (Split input), e.g. from PLINDER:
 $ plip --receptor receptor_A.cif receptor_B.cif --ligand ligand_1.cif ligand_2.cif -xt --npz
 ```
 
-In a Split input, each ligand file is exactly one ligand, consisting of all its atoms, and is never discarded as artifact, buffer or ion. The only exception are ligand files with a single metal atom: these are Cofactors and remain part of the surroundings. All other ligands are also present in the surroundings while one ligand is profiled. `--ligand` is optional, e.g. for interactions between receptor chains only.
+In a Split input, each ligand file is exactly one ligand, consisting of all its atoms, and is never discarded as artifact, buffer or ion. A ligand file with a single metal ion is a ligand of type `ION`, as for PDB input. All other ligands are also present in the surroundings while one ligand is profiled. `--ligand` is optional, e.g. for interactions between receptor chains only.
 
 Chains and residues are identified by the `auth_*` fields (`label_*` only if `auth_*` is missing). Internally, every chain is given a unique single-character ID and residue names longer than three characters (e.g. `GLC-F`) an alias; reports always show the original identifiers and contain the chain mapping. `--chains`, `--peptides`/`--inter`, `--intra` and `--regions` take the original chain IDs, e.g. `--chains "[[1.A], [1.B]]"`. If a chain ID occurs in more than one file, it is ambiguous and PLIP stops with an error showing the chain mapping. Atom indices in XML and TXT reports (`DONORIDX`, `LIG_IDX_LIST`, ...) refer to the internal merged structure; use the NPZ output for indices into the input files. PyMOL visualization (`-p`, `-y`) and `--stdout` are not supported for mmCIF input.
 
@@ -155,7 +155,6 @@ With `--npz` (mmCIF input only), PLIP writes all interactions of the System as n
 | `ligcoo`, `protcoo`, `watercoo` | (I, 3) | coordinates as in the XML report |
 | `ligand_hetid`, `ligand_chain`, `ligand_resnr`, `ligand_longname`, `ligand_type`, `ligand_file`, `ligand_smiles`, `ligand_inchikey` | (L,) | ligands (`ligand_file` is -1 if the ligand is not a ligand file) |
 | `chain_mapping_file`, `chain_mapping_original`, `chain_mapping_internal` | (C,) | chain mapping |
-| `cofactor_file`, `cofactor_atom`, `cofactor_chain`, `cofactor_resname` | (K,) | Cofactors |
 
 An atom index is the position of the atom in the `_atom_site` loop of its file within the selected model, i.e. the index into the AtomArray returned by `biotite.structure.io.pdbx.get_structure(pdbx.CIFFile.read(path), model=1, altloc="all")`. Hydrogens are never referenced; polar hydrogens are added by OpenBabel and interactions refer to their heavy atoms.
 

@@ -13,12 +13,8 @@ The protein part of a System, made of one or more chains.
 _Avoid_: protein (when meaning the role), target
 
 **Ligand**:
-A molecule whose interactions with the Receptor are profiled. When supplied as its own file, the Ligand is the entire content of that file, whether it is a small molecule or a peptide — except a lone metal ion, which becomes a Cofactor.
+A molecule whose interactions with the Receptor are profiled. When supplied as its own file, the Ligand is the entire content of that file, whether it is a small molecule or a peptide; a lone metal ion is a Ligand as well.
 _Avoid_: hetero group (when meaning the role)
-
-**Cofactor**:
-A Ligand file consisting of exactly one metal atom; it belongs to the Surroundings rather than being profiled as a Ligand, and its interactions are described as metal complexation. Metal complexes and clusters (e.g. heme, Fe4S4) remain Ligands.
-_Avoid_: metal ligand
 
 **Surroundings**:
 Everything in the System other than the Ligand currently being profiled — including the other Ligands — exactly as it would be present in a single structure file.
@@ -47,8 +43,8 @@ An interaction between residues of the same chain.
 - Every chain in a **System** traces back to exactly one source file via the **Chain mapping**
 - Each **Ligand** is profiled separately, against the **Receptor**, with the other **Ligands** present in the **Surroundings**
 - A **Split input** and a **Single-file input** of the same structure describe the same **System** and must yield the same interactions
-- In a **Split input**, each Ligand file is exactly one **Ligand** (unless it is a **Cofactor**) and is never discarded as an artifact, buffer or crystallisation additive; in a **Single-file input**, Ligands are detected and filtered as for PDB
-- A **System** with no **Ligands** (only **Cofactors**) is still valid: it yields no ligand interactions but can be profiled for **Inter-chain** and **Intra-chain interactions**
+- In a **Split input**, each Ligand file is exactly one **Ligand** and is never discarded as an artifact, buffer or crystallisation additive; in a **Single-file input**, Ligands are detected and filtered as for PDB
+- A **System** with no **Ligands** is still valid: it yields no ligand interactions but can be profiled for **Inter-chain** and **Intra-chain interactions**
 - Users always name chains by their original identifiers; the **Chain mapping** is internal and only surfaces when an identifier is ambiguous
 
 ## Flagged ambiguities

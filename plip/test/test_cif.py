@@ -132,25 +132,30 @@ class CIFInputTest(unittest.TestCase):
         self.assertEqual({e.text for e in xml.findall('.//restype_lig')}, {'GLC-F'})
         self.assertTrue({e.text for e in xml.findall('.//reschain')} <= {'1.A', '1.B'})
 
-    def test_cofactor(self):
-        """A ligand file with a single metal atom is a Cofactor, not a Ligand."""
+    def test_split_equals_single_file_and_pdb_4dlu(self):
+        """Same for a System with a Ligand file containing a single metal ion."""
+        self.assert_split_equals_single_file_and_pdb('4dlu__2__2.A_3.A__3.B_3.D')
+
+    def test_metal_ion_ligand(self):
+        """A ligand file with a single metal ion is a Ligand of type ION with metal complexes."""
         receptor, ligands = system_files('4dlu__2__2.A_3.A__3.B_3.D')
         arrays = profile_system(receptor=[receptor], ligands=ligands)
-        self.assertEqual(list(arrays['ligand_hetid']), ['GNP'])
-        self.assertEqual(list(arrays['ligand_file']), [1])
-        self.assertEqual(list(arrays['cofactor_resname']), ['MG'])
-        self.assertEqual(list(arrays['cofactor_chain']), ['3.D'])
-        self.assertEqual(list(arrays['cofactor_file']), [2])
-        self.assertEqual(list(arrays['cofactor_atom']), [0])
+        self.assertEqual(list(arrays['ligand_hetid']), ['GNP', 'MG'])
+        self.assertEqual(list(arrays['ligand_type']), ['SMALLMOLECULE', 'ION'])
+        self.assertEqual(list(arrays['ligand_file']), [1, 2])
+        metal = arrays['interaction_type'] == INTERACTION_TYPES.index('metal')
+        self.assertGreater(metal.sum(), 0)
+        self.assertTrue(np.all(arrays['interaction_ligand'][metal] == 1))
+        metal_pairs = arrays['pairs'][arrays['pairs'][:, 4] == INTERACTION_TYPES.index('metal')]
+        self.assertTrue(np.all((metal_pairs[:, 2] == 2) & (metal_pairs[:, 3] == 0)))
 
-    def test_only_cofactors(self):
+    def test_no_ligands(self):
         """A System without Ligands yields no interactions, but can still be profiled between chains."""
-        receptor, ligands = system_files('4dlu__2__2.A_3.A__3.B_3.D')
-        mg = [f for f in ligands if os.sep + '3.D' + os.sep in f]
-        arrays = profile_system(receptor=[receptor], ligands=mg)
+        receptor, _ = system_files('4dlu__2__2.A_3.A__3.B_3.D')
+        arrays = profile_system(receptor=[receptor])
         self.assertEqual(len(arrays['ligand_hetid']), 0)
         self.assertEqual(arrays['pairs'].shape, (0, 6))
-        arrays = profile_system(receptor=[receptor], ligands=mg, chains=[['2.A'], ['3.A']])
+        arrays = profile_system(receptor=[receptor], chains=[['2.A'], ['3.A']])
         self.assertGreater(len(arrays['interaction_type']), 0)
 
     def test_inter_chain_with_original_chain_ids(self):

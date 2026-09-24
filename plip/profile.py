@@ -41,8 +41,7 @@ def profile_system(structure=None, receptor=None, ligands=None, *, chains=None, 
 
     Either `structure` (Single-file input: one mmCIF file with receptor and ligands) or `receptor`
     (Split input: list of receptor mmCIF files, with an optional list of `ligands` mmCIF files) must be given.
-    In a Split input, each ligand file is one Ligand, except a file with a single metal atom, which is a
-    Cofactor and stays in the surroundings.
+    In a Split input, each ligand file is one Ligand (a file with a single metal atom is a Ligand of type ION).
 
     Chains are given with their original IDs from the input files:
       chains: [['1.A'], ['1.B']] -- receptor chains, ligand chains (inter-chain interactions)
@@ -97,8 +96,6 @@ def profile_system(structure=None, receptor=None, ligands=None, *, chains=None, 
             mol.load_pdb(pdbpath, ligand_groups=ligand_groups)
             if mol.protcomplex.OBMol.NumAtoms() < len(system.serial_file):
                 raise RuntimeError('OpenBabel did not read all atoms of the system')
-            if system.is_split and not ppi_mode and not mol.ligands:
-                logger.warning('the system contains no ligands (only cofactors)')
             mol.filetype = 'mmcif'
             mol.pymol_name = name
             for ligand in mol.ligands:

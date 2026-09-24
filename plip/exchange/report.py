@@ -72,10 +72,6 @@ class StructureReport:
                 e = et.SubElement(chain_mapping, 'chain', id=str(i + 1), file=str(entry.file_idx + 1),
                                   internal=entry.internal)
                 e.text = entry.original
-            cofactors = et.SubElement(report, 'cofactors')
-            for i, cofactor in enumerate(cif_system.cofactors):
-                e = et.SubElement(cofactors, 'cofactor', id=str(i + 1), file=str(cofactor.file_idx + 1))
-                e.text = ":".join([cofactor.resname, cofactor.chain, str(cofactor.resnr)])
         return report
 
     def construct_txt_file(self):
@@ -98,9 +94,6 @@ class StructureReport:
             textlines.append('Chain mapping (original chain, file -> internal chain):')
             for entry in cif_system.chain_mapping:
                 textlines.append(f'  {entry.original}, file {entry.file_idx + 1} -> {entry.internal}')
-            if cif_system.cofactors:
-                textlines.append('Cofactors: %s' % ', '.join(
-                    f'{c.resname}:{c.chain}:{c.resnr} (file {c.file_idx + 1})' for c in cif_system.cofactors))
             textlines.append('')
         return textlines
 

@@ -15,7 +15,7 @@ from collections import namedtuple
 import numpy as np
 import biotite.structure.io.pdbx as pdbx
 
-from plip.basic import config, logger
+from plip.basic import logger
 
 logger = logger.get_logger()
 
@@ -24,7 +24,6 @@ CHAIN_POOL = string.ascii_uppercase + string.ascii_lowercase + string.digits
 VALID_RESNAME = re.compile(r'^[A-Za-z0-9]{1,3}$')
 
 ChainMappingEntry = namedtuple('ChainMappingEntry', 'file_idx original internal')
-Cofactor = namedtuple('Cofactor', 'file_idx chain resname resnr atom_idx')
 
 
 def is_cif(path):
@@ -82,7 +81,6 @@ class CIFSystem:
         self.chain_mapping = self._map_chains()
         self._internal_chain = {(e.file_idx, e.original): e.internal for e in self.chain_mapping}
         self.resname_aliases = self._alias_resnames()
-        self.cofactors = self._find_cofactors()
         self.identifier_map = IdentifierMap(
             chains={e.internal: e.original for e in self.chain_mapping},
             resnames={alias: name for name, alias in self.resname_aliases.items()})
@@ -125,27 +123,12 @@ class CIFSystem:
             logger.debug(f'residue name {name} is represented as {alias}')
         return aliases
 
-    def _find_cofactors(self):
-        """Ligand files consisting of exactly one metal atom are Cofactors instead of Ligands."""
-        cofactors = []
-        for file_idx, atoms in enumerate(self.atoms):
-            if self.roles[file_idx] != 'ligand':
-                continue
-            heavy = atoms[atoms.element != 'H']
-            if heavy.array_length() == 1 and heavy.element[0].upper() in config.METAL_IONS:
-                atom_idx = int(np.flatnonzero(atoms.element != 'H')[0])
-                cofactors.append(Cofactor(file_idx=file_idx, chain=str(heavy.chain_id[0]),
-                                          resname=str(heavy.res_name[0]), resnr=int(heavy.res_id[0]),
-                                          atom_idx=atom_idx))
-        return cofactors
-
     @property
     def ligand_groups(self):
-        """For a Split input, the internal chain IDs of each Ligand file (Cofactors excluded)."""
-        cofactor_files = {c.file_idx for c in self.cofactors}
+        """For a Split input, the internal chain IDs of each Ligand file."""
         return [(file_idx, {self._internal_chain[(file_idx, str(c))] for c in np.unique(atoms.chain_id)})
                 for file_idx, atoms in enumerate(self.atoms)
-                if self.roles[file_idx] == 'ligand' and file_idx not in cofactor_files]
+                if self.roles[file_idx] == 'ligand']
 
     def internal_chains(self, original):
         """Returns all internal chain IDs for a chain ID as given in the input files."""

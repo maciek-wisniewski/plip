@@ -131,10 +131,6 @@ def interaction_arrays(mol, system):
     arrays['chain_mapping_file'] = np.array([e.file_idx for e in system.chain_mapping], dtype=np.int32)
     arrays['chain_mapping_original'] = _str_array([e.original for e in system.chain_mapping])
     arrays['chain_mapping_internal'] = _str_array([e.internal for e in system.chain_mapping])
-    arrays['cofactor_file'] = np.array([c.file_idx for c in system.cofactors], dtype=np.int32)
-    arrays['cofactor_atom'] = np.array([c.atom_idx for c in system.cofactors], dtype=np.int32)
-    arrays['cofactor_chain'] = _str_array([c.chain for c in system.cofactors])
-    arrays['cofactor_resname'] = _str_array([c.resname for c in system.cofactors])
     return arrays
 
 
