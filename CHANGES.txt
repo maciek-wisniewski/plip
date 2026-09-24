@@ -1,5 +1,11 @@
 Changelog
 ---------
+# unreleased
+* mmCIF input read with biotite, as a single file (`-f complex.cif`) or as separate receptor and ligand files (`--receptor`, `--ligand`)
+* chain options (`--chains`, `--peptides`, `--intra`, `--regions`) accept the original (multi-character) chain IDs of mmCIF files
+* new `--npz` option for mmCIF input: interactions as numpy arrays with atom indices per input file
+* new Python API `plip.profile.profile_system`
+
 # 3.0.1
 * remove setup.{py,cfg}, update pyproject.toml, use openbabel 3.2.0
 

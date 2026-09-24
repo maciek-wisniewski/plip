@@ -231,8 +231,9 @@ class PDBParser:
 
 
 class LigandFinder:
-    def __init__(self, proteincomplex, altconf, modres, covalent, mapper):
+    def __init__(self, proteincomplex, altconf, modres, covalent, mapper, ligand_groups=None):
         self.lignames_all = None
+        self.ligand_groups = ligand_groups  # Explicitly given ligands as sets of chains (Split input)
         self.lignames_kept = None
         self.water = None
         self.proteincomplex = proteincomplex
@@ -297,7 +298,21 @@ class LigandFinder:
         Returns all non-empty ligands.
         """
 
-        if config.PEPTIDES == [] and config.INTRA is None and config.CHAINS is None and config.REGIONS is None:
+        if config.PEPTIDES == [] and config.INTRA is None and config.CHAINS is None and config.REGIONS is None \
+                and self.ligand_groups is not None:
+            # Each explicitly given ligand consists of all residues of its chains, without any filtering
+            self.water = [o for o in pybel.ob.OBResidueIter(self.proteincomplex.OBMol) if o.GetResidueProperty(9)]
+            ligands = []
+            for chains in self.ligand_groups:
+                residues = [o for o in pybel.ob.OBResidueIter(self.proteincomplex.OBMol)
+                            if o.GetChain() in chains and not o.GetResidueProperty(9)]
+                if residues:
+                    ligands.append(self.extract_ligand(residues))
+            self.lignames_kept = list(set(lig.hetid for lig in ligands))
+            self.lignames_all = set(self.lignames_kept)
+            self.covalent = []
+
+        elif config.PEPTIDES == [] and config.INTRA is None and config.CHAINS is None and config.REGIONS is None:
             # Extract small molecule ligands (default)
             ligands = []
 
@@ -1485,15 +1500,19 @@ class PDBComplex:
         self.excluded = []  # Excluded ligands
         self.Mapper = Mapper()
         self.ligands = []
+        self.explicit_ligands = False  # Ligands were given explicitly (Split input)
+        self.identifier_map = None  # Translates internal chain IDs and residue names to original ones (mmCIF input)
 
     def __str__(self):
         formatted_lig_names = [":".join([x.hetid, x.chain, str(x.position)]) for x in self.ligands]
         return "Protein structure %s with ligands:\n" % (self.pymol_name) + "\n".join(
             [lig for lig in formatted_lig_names])
 
-    def load_pdb(self, pdbpath, as_string=False):
+    def load_pdb(self, pdbpath, as_string=False, ligand_groups=None):
         """Loads a pdb file with protein AND ligand(s), separates and prepares them.
-        If specified 'as_string', the input is a PDB string instead of a path."""
+        If specified 'as_string', the input is a PDB string instead of a path.
+        If 'ligand_groups' (a list of sets of chain IDs) is given, each group is taken as one ligand
+        instead of detecting ligands in the structure."""
         if as_string:
             self.sourcefiles['pdbcomplex.original'] = None
             self.sourcefiles['pdbcomplex'] = None
@@ -1550,7 +1569,9 @@ class PDBComplex:
         logger.debug(f'PyMOL name set as: {self.pymol_name}')
 
         # Extract and prepare ligands
-        ligandfinder = LigandFinder(self.protcomplex, self.altconf, self.modres, self.covalent, self.Mapper)
+        ligandfinder = LigandFinder(self.protcomplex, self.altconf, self.modres, self.covalent, self.Mapper,
+                                    ligand_groups=ligand_groups)
+        self.explicit_ligands = ligand_groups is not None
         self.ligands = ligandfinder.ligands
         self.excluded = ligandfinder.excluded
 
@@ -1635,6 +1656,10 @@ class PDBComplex:
         resis = self.resis
         if config.KEEPMOD:
             resis = self.exclude_ligand_modresidues(lig_obj.members, resis)
+        if self.explicit_ligands and ligand.type not in ('PEPTIDE', 'INTRA'):
+            # An explicitly given ligand may consist of amino acids, which must not be part of its own binding site
+            lig_chains = {member[1] for member in lig_obj.members}
+            resis = [obres for obres in resis if obres.GetChain() not in lig_chains]
 
         bs_res = self.extract_bs(cutoff, lig_obj.centroid, resis, lig_obj.regions)
         # Get a list of all atoms belonging to the binding site, search by idx
@@ -1667,6 +1692,7 @@ class PDBComplex:
 
         bs_obj = BindingSite(bs_atoms_refined, self.protcomplex, self, self.altconf, min_dist, self.Mapper, lig_obj.regions)
         pli_obj = PLInteraction(lig_obj, bs_obj, self)
+        pli_obj.identifier_map = self.identifier_map
         self.interaction_sets[ligand.mol.title] = pli_obj
 
     def exclude_ligand_modresidues(self, ligmembers, resis):

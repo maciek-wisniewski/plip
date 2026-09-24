@@ -118,6 +118,60 @@ Please note that detection within a chain takes much longer than detection of pr
 ### Interactions of Molecules with DNA/RNA
 PLIP can characterize interactions between ligands and DNA/RNA. A special mode allows to switch from treating DNA/RNA molecules as ligands to treating them as part of the receptor in the structure. If a protein is present, too, interactions of the ligand with both, protein and nucleic acids, will be shown. To use this mode, start PLIP with the option `--dnareceptor`.
 
+## Analyze mmCIF structures with PLIP
+mmCIF files (`.cif`, `.cif.gz`, `.mmcif`) are read with [biotite](https://www.biotite-python.org) and then analyzed by exactly the same pipeline as PDB files (see `docs/adr/0001-mmcif-read-with-biotite-routed-through-pdb-text.md`). The terms used below are defined in `CONTEXT.md`.
+
+### Single-file and Split input
+A System can be given as one mmCIF file with receptor and ligands (Single-file input), in which case ligands are detected as for PDB files:
+
+```bash
+$ plip -f complex.cif -xt --npz
+```
+
+or as separate receptor and ligand files (Split input), e.g. from PLINDER:
+
+```bash
+$ plip --receptor receptor_A.cif receptor_B.cif --ligand ligand_1.cif ligand_2.cif -xt --npz
+```
+
+In a Split input, each ligand file is exactly one ligand, consisting of all its atoms, and is never discarded as artifact, buffer or ion. The only exception are ligand files with a single metal atom: these are Cofactors and remain part of the surroundings. All other ligands are also present in the surroundings while one ligand is profiled. `--ligand` is optional, e.g. for interactions between receptor chains only.
+
+Chains and residues are identified by the `auth_*` fields (`label_*` only if `auth_*` is missing). Internally, every chain is given a unique single-character ID and residue names longer than three characters (e.g. `GLC-F`) an alias; reports always show the original identifiers and contain the chain mapping. `--chains`, `--peptides`/`--inter`, `--intra` and `--regions` take the original chain IDs, e.g. `--chains "[[1.A], [1.B]]"`. If a chain ID occurs in more than one file, it is ambiguous and PLIP stops with an error showing the chain mapping. Atom indices in XML and TXT reports (`DONORIDX`, `LIG_IDX_LIST`, ...) refer to the internal merged structure; use the NPZ output for indices into the input files. PyMOL visualization (`-p`, `-y`) and `--stdout` are not supported for mmCIF input.
+
+### NPZ output
+With `--npz` (mmCIF input only), PLIP writes all interactions of the System as numpy arrays (`<name>.npz`):
+
+| Array | Shape | Content |
+|---|---|---|
+| `pairs` | (P, 6) | `[rec_file, rec_atom, lig_file, lig_atom, type, interaction_id]`, one row per atom pair. Interactions between atom groups (rings, charged groups) contribute all pairs of their atoms. For metal complexes, the metal is the ligand-side atom and the coordinated atom the receptor-side atom (see `location`) |
+| `rec_chain`, `lig_chain` | (P,) | original chain IDs of both atoms of a pair |
+| `files`, `file_role` | (F,) | input files (`rec_file`/`lig_file` index into them) and their role (`complex`, `receptor`, `ligand`) |
+| `interaction_types` | (8,) | names of the codes in `type`: hydrophobic, hbond, waterbridge, saltbridge, pistacking, pication, halogen, metal |
+| `interaction_type`, `interaction_ligand` | (I,) | type and ligand (index into `ligand_*`) of each interaction |
+| `resnr`, `restype`, `reschain`, `resnr_lig`, `restype_lig`, `reschain_lig` | (I,) | residues of the interaction partners |
+| `dist`, `centdist`, `dist_h_a`, `dist_d_a`, `dist_a_w`, `dist_d_w`, `don_angle`, `acc_angle`, `water_angle`, `angle`, `offset`, `rms` | (I,) | geometry, NaN if not applicable |
+| `sidechain`, `protisdon`, `protispos`, `protcharged`, `coordination`, `complexnum`, `water_file`, `water_atom` | (I,) | integer features, -1 if not applicable |
+| `donortype`, `acceptortype`, `stacking_type`, `lig_group`, `metal_type`, `target_type`, `location`, `geometry` | (I,) | string features, empty if not applicable |
+| `ligcoo`, `protcoo`, `watercoo` | (I, 3) | coordinates as in the XML report |
+| `ligand_hetid`, `ligand_chain`, `ligand_resnr`, `ligand_longname`, `ligand_type`, `ligand_file`, `ligand_smiles`, `ligand_inchikey` | (L,) | ligands (`ligand_file` is -1 if the ligand is not a ligand file) |
+| `chain_mapping_file`, `chain_mapping_original`, `chain_mapping_internal` | (C,) | chain mapping |
+| `cofactor_file`, `cofactor_atom`, `cofactor_chain`, `cofactor_resname` | (K,) | Cofactors |
+
+An atom index is the position of the atom in the `_atom_site` loop of its file within the selected model, i.e. the index into the AtomArray returned by `biotite.structure.io.pdbx.get_structure(pdbx.CIFFile.read(path), model=1, altloc="all")`. Hydrogens are never referenced; polar hydrogens are added by OpenBabel and interactions refer to their heavy atoms.
+
+### Python API
+The same analysis is available as a function, which returns the NPZ content as a dict of numpy arrays:
+
+```python
+from plip.profile import profile_system
+
+arrays = profile_system(receptor=['receptor.cif'], ligands=['ligand_1.cif', 'ligand_2.cif'],
+                        npz='system.npz', xml='system.xml')
+arrays = profile_system(structure='complex.cif', chains=[['1.A'], ['1.B']])
+```
+
+Options correspond to the command line options (`peptides`, `intra`, `regions`, `model`, `keepmod`, `nohydro`, ...). PLIP keeps its settings in the global module `plip.basic.config`; `profile_system` restores them afterwards, but it is not thread-safe. Use processes for parallel runs.
+
 ## Changing detection thresholds
 The PLIP algorithm uses a rule-based detection to report non-covalent interaction between proteins and their partners. The current settings are based on literature values and have been refined based on extensive testing with independent cases from mainly crystallography journals, covering a broad range of structure resolutions. For most users, it is not recommended to change the standard settings. However, there may be cases where changing detection thresholds is advisable (e.g. sets with multiple very low resolution structures).
 

@@ -1,0 +1,100 @@
+data_4dlu__2__2.A_3.A__3.B_3.D
+#
+loop_
+_chem_comp_bond.pdbx_ordinal 
+_chem_comp_bond.comp_id 
+_chem_comp_bond.atom_id_1 
+_chem_comp_bond.atom_id_2 
+_chem_comp_bond.value_order 
+_chem_comp_bond.pdbx_aromatic_flag 
+_chem_comp_bond.pdbx_stereo_config 
+1  GNP P1  O1  DOUB N ?
+2  GNP P1  O2  SING N ?
+3  GNP P1  O3  SING N ?
+4  GNP P1  N1  SING N ?
+5  GNP N1  P2  SING N ?
+6  GNP P2  O4  DOUB N ?
+7  GNP P2  O5  SING N ?
+8  GNP P2  O6  SING N ?
+9  GNP O6  P3  SING N ?
+10 GNP P3  O7  DOUB N ?
+11 GNP P3  O8  SING N ?
+12 GNP P3  O9  SING N ?
+13 GNP O9  C1  SING N ?
+14 GNP C1  C2  SING N ?
+15 GNP C2  O10 SING N ?
+16 GNP C2  C3  SING N ?
+17 GNP O10 C5  SING N ?
+18 GNP C3  O11 SING N ?
+19 GNP C3  C4  SING N ?
+20 GNP C4  O12 SING N ?
+21 GNP C4  C5  SING N ?
+22 GNP C5  N2  SING N ?
+23 GNP N2  C6  SING N ?
+24 GNP N2  C10 SING N ?
+25 GNP C6  N3  DOUB N ?
+26 GNP N3  C7  SING N ?
+27 GNP C7  C8  SING N ?
+28 GNP C7  C10 DOUB N ?
+29 GNP C8  O13 DOUB N ?
+30 GNP C8  N4  SING N ?
+31 GNP N4  C9  SING N ?
+32 GNP C9  N5  SING N ?
+33 GNP C9  N6  DOUB N ?
+34 GNP N6  C10 SING N ?
+#
+loop_
+_atom_site.group_PDB 
+_atom_site.type_symbol 
+_atom_site.label_atom_id 
+_atom_site.label_alt_id 
+_atom_site.label_comp_id 
+_atom_site.label_asym_id 
+_atom_site.label_entity_id 
+_atom_site.label_seq_id 
+_atom_site.pdbx_PDB_ins_code 
+_atom_site.auth_seq_id 
+_atom_site.auth_comp_id 
+_atom_site.auth_asym_id 
+_atom_site.auth_atom_id 
+_atom_site.B_iso_or_equiv 
+_atom_site.occupancy 
+_atom_site.pdbx_formal_charge 
+_atom_site.Cartn_x 
+_atom_site.Cartn_y 
+_atom_site.Cartn_z 
+_atom_site.pdbx_PDB_model_num 
+_atom_site.id 
+HETATM P P1  . GNP 3.B 1 1 . 1 GNP 3.B P1  nan 0.0 ? 16.396 52.785 -67.493 1 1
+HETATM O O1  . GNP 3.B 1 1 . 1 GNP 3.B O1  nan 0.0 ? 15.631 52.144 -66.253 1 2
+HETATM O O2  . GNP 3.B 1 1 . 1 GNP 3.B O2  nan 0.0 ? 17.859 53.17  -66.994 1 3
+HETATM O O3  . GNP 3.B 1 1 . 1 GNP 3.B O3  nan 0.0 ? 15.632 53.995 -68.031 1 4
+HETATM N N1  . GNP 3.B 1 1 . 1 GNP 3.B N1  nan 0.0 ? 16.533 51.618 -68.736 1 5
+HETATM P P2  . GNP 3.B 1 1 . 1 GNP 3.B P2  nan 0.0 ? 17.39  51.848 -70.137 1 6
+HETATM O O4  . GNP 3.B 1 1 . 1 GNP 3.B O4  nan 0.0 ? 16.65  52.734 -71.125 1 7
+HETATM O O5  . GNP 3.B 1 1 . 1 GNP 3.B O5  nan 0.0 ? 18.822 52.315 -69.883 1 8
+HETATM O O6  . GNP 3.B 1 1 . 1 GNP 3.B O6  nan 0.0 ? 17.386 50.411 -70.78  1 9
+HETATM P P3  . GNP 3.B 1 1 . 1 GNP 3.B P3  nan 0.0 ? 18.539 49.328 -70.726 1 10
+HETATM O O7  . GNP 3.B 1 1 . 1 GNP 3.B O7  nan 0.0 ? 19.715 49.814 -71.57  1 11
+HETATM O O8  . GNP 3.B 1 1 . 1 GNP 3.B O8  nan 0.0 ? 18.899 48.972 -69.271 1 12
+HETATM O O9  . GNP 3.B 1 1 . 1 GNP 3.B O9  nan 0.0 ? 17.921 48.117 -71.457 1 13
+HETATM C C1  . GNP 3.B 1 1 . 1 GNP 3.B C1  nan 0.0 ? 16.774 47.397 -70.954 1 14
+HETATM C C2  . GNP 3.B 1 1 . 1 GNP 3.B C2  nan 0.0 ? 16.61  46.044 -71.441 1 15
+HETATM O O10 . GNP 3.B 1 1 . 1 GNP 3.B O10 nan 0.0 ? 16.402 46.087 -72.894 1 16
+HETATM C C3  . GNP 3.B 1 1 . 1 GNP 3.B C3  nan 0.0 ? 17.831 45.207 -71.243 1 17
+HETATM O O11 . GNP 3.B 1 1 . 1 GNP 3.B O11 nan 0.0 ? 17.476 43.891 -70.988 1 18
+HETATM C C4  . GNP 3.B 1 1 . 1 GNP 3.B C4  nan 0.0 ? 18.575 45.303 -72.523 1 19
+HETATM O O12 . GNP 3.B 1 1 . 1 GNP 3.B O12 nan 0.0 ? 19.408 44.209 -72.822 1 20
+HETATM C C5  . GNP 3.B 1 1 . 1 GNP 3.B C5  nan 0.0 ? 17.473 45.443 -73.528 1 21
+HETATM N N2  . GNP 3.B 1 1 . 1 GNP 3.B N2  nan 0.0 ? 17.869 46.158 -74.74  1 22
+HETATM C C6  . GNP 3.B 1 1 . 1 GNP 3.B C6  nan 0.0 ? 18.387 47.4   -74.801 1 23
+HETATM N N3  . GNP 3.B 1 1 . 1 GNP 3.B N3  nan 0.0 ? 18.618 47.693 -76.094 1 24
+HETATM C C7  . GNP 3.B 1 1 . 1 GNP 3.B C7  nan 0.0 ? 18.225 46.631 -76.835 1 25
+HETATM C C8  . GNP 3.B 1 1 . 1 GNP 3.B C8  nan 0.0 ? 18.214 46.343 -78.203 1 26
+HETATM O O13 . GNP 3.B 1 1 . 1 GNP 3.B O13 nan 0.0 ? 18.677 47.265 -79.138 1 27
+HETATM N N4  . GNP 3.B 1 1 . 1 GNP 3.B N4  nan 0.0 ? 17.763 45.162 -78.623 1 28
+HETATM C C9  . GNP 3.B 1 1 . 1 GNP 3.B C9  nan 0.0 ? 17.307 44.251 -77.761 1 29
+HETATM N N5  . GNP 3.B 1 1 . 1 GNP 3.B N5  nan 0.0 ? 16.813 42.987 -78.273 1 30
+HETATM N N6  . GNP 3.B 1 1 . 1 GNP 3.B N6  nan 0.0 ? 17.296 44.491 -76.436 1 31
+HETATM C C10 . GNP 3.B 1 1 . 1 GNP 3.B C10 nan 0.0 ? 17.744 45.657 -75.968 1 32
+#
